@@ -1,6 +1,6 @@
 network:
   num_blocks: 3
-  num_seg_class: 2
+  num_seg_class: 2  # 0: background, 1: myocardium
   rescale_factor: 0.1
   input_size:
     - 128
@@ -9,31 +9,31 @@ network:
   hidden_dim: 128
   coord_emb_dim: 384
 prediction:
-  model_weights_filename: pretrained/task1_mmwhs.hdf5
+  model_weights_filename: /path/to/pretrained/task1_mmwhs.hdf5 
   image:
-    image_folder: /mnt/data/Experiment/Data/DeformNet_Data/MMWHS/image/
+    image_folder: /path/to/MMWHS/nii/
     image_folder_attr: _test
     modality:
       - ct
   mesh:
-    mesh_dat_filemame: templates/meshes/07_19_2024_22_33_11_bbw.dat
-    mesh_tmplt_filename: templates/meshes/07_19_2024_22_33_11_template.vtp
+    mesh_dat_filemame: templates/meshes/??_??_20??_??_??_??_bbw.dat
+    mesh_tmplt_filename: templates/meshes/??_??_20??_??_??_??_template.vtp
     swap_bc_coordinates: null
-    num_mesh: 1
-  output_folder: /mnt/data/Experiment/DeformNet/Output/MMWHS/
+    num_mesh: 1     # equals the number of template mesh
+  output_folder: /path/to/output/
   mode: test
 train:
     batch_size: 1
     lr: 0.0005
-    num_epoch: 3
+    num_epoch: 300
     pre_train: null
     pre_train_unet: null
-    mesh_dat_filemame: templates/meshes/07_19_2024_22_33_11_bbw.dat
+    mesh_dat_filemame: templates/meshes/??_??_20??_??_??_??_bbw.dat
     data:
         train_img_folder:
-            - /mnt/data/Experiment/Data/DeformNet_Data/MMWHS/tfrecords_augmented/
+            - /path/to/MMWHS/tfrecords_augmented/
         val_img_folder: 
-            - /mnt/data/Experiment/Data/DeformNet_Data/MMWHS/tfrecords/
+            - /path/to/MMWHS/tfrecords/
         file_pattern: '*.tfrecords'
         train_sub_folder_attr: ['']
         val_sub_folder_attr: ['']
@@ -51,5 +51,5 @@ train:
         if_mask: True
         if_cap: False
         turn_off_l2: False
-    output_folder: /mnt/data/Experiment/DeformNet/Output/MMWHS/
+    output_folder: /path/to/output/
 

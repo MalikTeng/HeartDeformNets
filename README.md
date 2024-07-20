@@ -1,6 +1,6 @@
 # HeartDeformNets
 
-This repository contains the source code of our paper:
+This repository forks from the [fkong/HeartDeformNet](https://github.com/fkong7/HeartDeformNets.git) that used for their paper:
 
 Fanwei Kong, Shawn Shadden, Learning Whole Heart Mesh Generation From Patient Images For Computational Simulations (2022)
 
@@ -8,54 +8,132 @@ Fanwei Kong, Shawn Shadden, Learning Whole Heart Mesh Generation From Patient Im
 
 
 ## Installation
-To download our source code with submodules, please run 
+
+To download the source code with submodules, please run 
 ```
-git clone --recurse-submodules https://github.com/fkong7/HeartDeformNets.git
+git clone --recurse-submodules https://github.com/MalikTeng/HeartDeformNets.git
 ```
-The dependencies of our implementation can be installed by running the following command.
+To prepare the environment for this implementation, follow the steps below:
 ```
-pip install -r requirements.txt
+cd HeartDeformNets
+conda create -n deformnet python\<3.7
+conda activate deformnet
+chmod +x install_packages.sh
+./install_packages.sh
 ```
+If the tensorflow-gpu version cannot be installed, try terminate the above shell script and run the following command:
+```
+pip install tensorflow-gpu==1.15.0
+```
+
 ## Template Meshes
 
-We provide the following template meshes in `templates/meshes`
-- `mmwhs_template.vtp`: The whole heart mesh template used in Task1, with the blood pools of 4 chambers, aorta and pulmonary arteries.
-- `wh_template.vtp`: The whole heart mesh template used in Task2, containing pulmonary veins and vena cava inlet geometries for CFD simulations. 
-- `lh_template.vtp` and  `rh_template.vtp`: The left heart and the right heart mesh template constructed from `wh_template.vtp` for 4-chamber CFD simulations of cardiac flow.
-- `lv_template.vtp`: The left ventricle template constructed from `mmwhs_template.vtp` for CFD simulation of left ventricle flow. 
+_Due to vtk version compatibility issues, the `create_template.sh` file the author provided cannot produce compatible vtp files in an end to end manner, and test passed if only one surface mesh is needed._
 
-Those whole heart templates were created from the ground truth segmentation of a training sample. We include an example segmentation we used to create `wh_template.vtp` here: `templates/segmentation/wh.nii.gz`. To construct the training template mesh as well as the associated biharmonic coordinates and mesh information required during training, you need the following steps
-
+To generate a template mesh (left ventricle myocardium) from `templates/segmentation/mmwhs_binary.nii.gz`, which is a binary segmentation mask of a randomly selected MMWHS dataset case, follow the steps below:
 - Compile the C++ code for computing biharmonc coordinates in `templates/bc` by 
+    ```
+    cd templates/bc
+    mkdir build
+    cd build
+    cmake ..
+    make
+    ```
+- Change the `output_dir` as the path to store the template mesh and `seg_fn` as the path to the binary segmentation mask in `create_template.sh`.
+- Run the following command to generate the template mesh (by default `templates/meshes/template.vtp`), type in or paste a) the path to store the template mesh, b) the path to the binary segmentation mask.
+    ```
+    ./create_template.sh
+    ```
+- Take a note of the last two lines of the output, which are `ctrl_fn` and `weight_fn` that will be used later.
+- Locate the output template mesh from the previous step in the `output_dir`, overwrite it with another software or packages -- I used __ParaView__ to load it, save it with __selecting "RegionID" data and save it in ASCII__, and overwrite the file.
+- Run the following command to generate the dat data, type in path as required.
+    ```
+    chmod +x create_dat.sh
+    ./create_dat.sh
+    ```
+- Check the output vtp file with __the filename of current date and time__ in the `output_dir`, and do the same as what been done with the template mesh in previous steps.
+
+## Training
+
+### Data Preparation
+
+The data preparation code is a copy from the author's [MeshDeformNet](https://github.com/fkong7/MeshDeformNet.git) repository. 
+
+Ensure you have a directory structure as follows (e.g. for __MMWHS__ dataset):
 ```
-mkdir build && cd build && cmake .. && make
+|-- MMWHS
+    |-- nii
+        |-- ct_train        # image nii.gz files
+        |-- ct_train_seg    # label nii.gz files
+        |-- ct_val
+        |-- ct_val_seg
+        |-- mr_train
+        |-- mr_train_seg
+        |-- mr_val
+        |-- mr_val_seg
 ```
-- Specify the `output_dir` and the path of the segmentation file `seg_fn` in `create_template.sh` and then 
+_I have all image and label foreground cropped, resized, and padded to 128x128x128. Not sure what will happen if not doing so._
+
+The data preparation steps are as follows:
+- If data augmentation is prefered, you need the __mpi4py__ (Python bindings for MPI) installed, which I will showcase how to install it on a Linux machine.
+    - Install MPI implementation:
+    ```
+    sudo apt update
+    sudo apt install libopenmpi-dev
+    ```
+    - Install mpi4py (if you are in the `deformnet` environment):
+    ```
+    pip install mpi4py
+    ```
+- Run data augmentation by the following command (I did this by running on local machine, but if you are doing this with ssh on a remote machine, you need to install __X11__ and __xauth__):
+    ```
+    mpirun -n 4 python data/data_augmentation.py \
+        --im_dir /path/to/MMWHS/nii/ct_train \
+        --seg_dir /path/to/MMWHS/nii/ct_train_seg \
+        --out_dir /path/to/MMWHS/nii_augmented \
+        --modality ct \ # ct or mr
+        --mode train \  # train or val
+        --num 10        # number of augmentated copies per image, 10 for ct and 20 for mr
+    ```
+
+    where I used `-n 4` instead of `-n 20` as the author suggested in __MeshDeformNet__ because of not enough resources on my local machine.
+- Do the same to `val` data same as above as you like. The above command will produce a new folder `nii_augmented` in the `MMWHS` directory.
+- Preprocess data by applying intensity normalisation and resizing, results will be saved as tfrecords files in a new folder `tfresults` in the `MMWHS` directory.
+    ```
+    python data/data2tfrecords.py \
+        --folder /path/to/MMWHS/nii \
+        --modality ct \             # ct or mr
+        --size 128 128 128 \        # image dimension for training
+        --folder_postfix _train \   # _train or _val, i.e. will process the images/segmentation in ct_train and ct_train_seg
+        --deci_rate 0  \            # decimation rate on ground truth surface meshes
+        --smooth_ite 50 \           # Laplacian smoothing on ground truth surface meshes
+        --out_folder /path/to/MMWHS/tfrecords \
+        --seg_id 1                  # segmentation ids, 1-7 for seven cardiac structures
+    ```
+- Do the same to augmented data in `nii_augmented` folder as above, if you are using data augmentation.
+
+### Compile nndistance Loss
+
+If not already seen a `tf_nndistance_so.so` file in the `external/`, which is a required Python module compiled in C++ for training the network. To compile the module, run the following command:
 ```
-source create_template.sh
+cd external/
+make
+cd ..
+```
+
+### Training
+
+_You may create a training YAML file following the author's provided examples in the `config` folder. This config uses a myocardium template mesh, a correct template mesh is required._
+
+After the previous steps of data preprocessing, generating template mesh and dat files, you should change the pathnames in the `config/task1_mmwhs.yaml` file, and may run the following command to train the network:
+```
+python train.py --config config/task1_mmwhs.yaml
 ```
 
 ## Evaluation
 
-We provide the pretrained network in `pretrained`. 
-- `pretrained/task1_mmwhs.hdf5` is the pretrained network used in Task1, whole heart segmentation of the MMWHS dataset. 
-- `pretrained/task2_wh.hdf5` is the pretrained network used in Task2, whole heart mesh generation with inlet vessel geometries for CFD simulations. 
 
-The config files for both tasks are stored in `config`. The first task uses a template mesh without pulmonary veins and vena cava geometries and the second task uses another template mesh with those structures so that the predictions can be used for CHD simulations. Please make sure to use the correct template mesh depending on the task. The template mesh can be generated from the previous steps using the corresponding segmentation files. After changing the pathnames in the config files, you can use `predict.py` with the following arguments to generate predictions. 
+After changing the pathnames in the `config/task1_mmwhs.yaml` file, you may run the following command to evaluate the network: 
 ```
 python predict.py --config config/task2_wh.yaml
 ```
-
-Some notes about the config options:
-- `--image`: the images should be stored under with in `<image>/ct<attr>`, thus for `--attr _test`, and `--modality ct` the image volumes should be in `image_dir_name/ct_test`. You can use `--modality ct mr' to predict both on CT and MR images where CT images are stored in `image_dir_name/ct_test` and MR images are stored in `image_dir_name/mr_test`.
-- `--mesh_dat` is the `<date>_bbw.dat` file generated from running `create_template.sh` on the training template.
-- `--swap_dat`is optional for providing the biharmonic coordinates corresponding to a modified template (e.g. the CFD-suitable template created from the training template). (TO-DO provide instructions on interpolating biharmonic coordinates to a modified template)
-- `--seg_id` is the list of segmentation class IDs we expect the predictions to have
-- The results contain deformed test template meshes from each deformation block. The final mesh from the last deformation block is `block_2_*.vtp`.
-
-## Training
-
-To train our network model, please run the following command.
-```
-python train.py --config config/task2_wh.yaml
- ```

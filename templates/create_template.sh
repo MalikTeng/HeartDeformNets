@@ -1,8 +1,10 @@
-output_dir=/home/yd21/Documents/HeartDeformNets/templates/meshes
-seg_fn=/home/yd21/Documents/HeartDeformNets/templates/segmentation/mmwhs_binary.nii.gz
+read -p "Enter the output directory: " output_dir
+read -p "Enter the segmentation file path: " seg_fn
+
+mkdir -p $output_dir
 target_node_num=3260
 num_handles_arr=(75 600)
-num_mesh=7
+num_mesh=1
 
 shape_deform_dir=bc/build
 

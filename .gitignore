@@ -127,4 +127,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-templates/meshes/template_manifold_600pts.csv

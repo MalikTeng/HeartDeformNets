@@ -3,7 +3,7 @@ import nibabel as nib
 import numpy as np
 
 # Define the path to the input file
-input_file = '/home/yd21/Documents/HeartDeformNets/templates/segmentation/mmwhs.nii.gz'
+input_file = 'segmentation/mmwhs.nii.gz'
 
 # Load the segmentation mask volume
 mask_volume = nib.load(input_file)

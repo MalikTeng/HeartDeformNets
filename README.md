@@ -62,8 +62,14 @@ Ensure you have a directory structure as follows (e.g., for the __MMWHS__ datase
 ```
 |-- MMWHS
     |-- nii
-        |-- ct_train        # image nii.gz files
-        |-- ct_train_seg    # label nii.gz files
+        |-- ct_train
+            |-- 01.nii.gz
+            |-- 02.nii.gz
+            |-- ...
+        |-- ct_train_seg
+            |-- 01.nii.gz
+            |-- 02.nii.gz
+            |-- ...
         |-- ct_val
         |-- ct_val_seg
         |-- mr_train

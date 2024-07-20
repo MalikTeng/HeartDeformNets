@@ -89,20 +89,42 @@ def reference_image_build(spacing, size, template_size, dim):
     reference_image.SetDirection(np.eye(3).ravel())
     return reference_image
 
+# def centering(img, ref_img, order=1):
+#     dimension = img.GetDimension()
+#     transform = sitk.AffineTransform(dimension)
+#     transform.SetMatrix(img.GetDirection())
+#     transform.SetTranslation(np.array(img.GetOrigin()) - ref_img.GetOrigin())
+#     # Modify the transformation to align the centers of the original and reference image instead of their origins.
+#     centering_transform = sitk.TranslationTransform(dimension)
+#     img_center = np.array(img.TransformContinuousIndexToPhysicalPoint(np.array(img.GetSize())/2.0))
+#     reference_center = np.array(ref_img.TransformContinuousIndexToPhysicalPoint(np.array(ref_img.GetSize())/2.0))
+#     centering_transform.SetOffset(np.array(transform.GetInverse().TransformPoint(img_center) - reference_center))
+#     centered_transform = sitk.Transform(transform)
+#     centered_transform.AddTransform(centering_transform)
+
+#     return transform_func(img, ref_img, centered_transform, order)
+
 def centering(img, ref_img, order=1):
     dimension = img.GetDimension()
     transform = sitk.AffineTransform(dimension)
     transform.SetMatrix(img.GetDirection())
     transform.SetTranslation(np.array(img.GetOrigin()) - ref_img.GetOrigin())
+    
     # Modify the transformation to align the centers of the original and reference image instead of their origins.
-    centering_transform = sitk.TranslationTransform(dimension)
     img_center = np.array(img.TransformContinuousIndexToPhysicalPoint(np.array(img.GetSize())/2.0))
     reference_center = np.array(ref_img.TransformContinuousIndexToPhysicalPoint(np.array(ref_img.GetSize())/2.0))
-    centering_transform.SetOffset(np.array(transform.GetInverse().TransformPoint(img_center) - reference_center))
-    centered_transform = sitk.Transform(transform)
-    centered_transform.AddTransform(centering_transform)
+    
+    centering_offset = np.array(transform.GetInverse().TransformPoint(img_center) - reference_center)
+    
+    # Create a composite transform
+    composite_transform = sitk.CompositeTransform(dimension)
+    composite_transform.AddTransform(transform)
+    
+    centering_transform = sitk.TranslationTransform(dimension)
+    centering_transform.SetOffset(centering_offset)
+    composite_transform.AddTransform(centering_transform)
 
-    return transform_func(img, ref_img, centered_transform, order)
+    return transform_func(img, ref_img, composite_transform, order)
 
 def isometric_transform(image, ref_img, orig_direction, order=1, target=None):
     # transform image volume to orientation of eye(dim)

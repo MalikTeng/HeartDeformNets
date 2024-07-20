@@ -112,6 +112,7 @@ def get_baseline_dataset(filenames, preproc_fn=functools.partial(_augment),
     #  tf.data.TFRecordDataset, cycle_length=threads))
     dataset = files.interleave(lambda x: tf.data.TFRecordDataset(x),
                           cycle_length=threads, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    # print("DEBUG: ", files)
     # Map our preprocessing function to every element in our dataset, taking
     # advantage of multithreading
     dataset_img = dataset.map(_parse_function_all('img'))

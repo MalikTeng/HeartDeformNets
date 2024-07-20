@@ -1,6 +1,6 @@
 network:
   num_blocks: 3
-  num_seg_class: 1
+  num_seg_class: 2
   rescale_factor: 0.1
   input_size:
     - 128
@@ -11,40 +11,38 @@ network:
 prediction:
   model_weights_filename: pretrained/task1_mmwhs.hdf5
   image:
-    image_folder: examples/images
+    image_folder: /mnt/data/Experiment/Data/DeformNet_Data/MMWHS/image/
     image_folder_attr: _test
     modality:
       - ct
   mesh:
-    mesh_dat_filemame: examples/09_13_2022_22_29_27_bbw.dat
-    mesh_tmplt_filename: examples/09_13_2022_22_29_27_template.vtp
+    mesh_dat_filemame: templates/meshes/07_19_2024_22_33_11_bbw.dat
+    mesh_tmplt_filename: templates/meshes/07_19_2024_22_33_11_template.vtp
     swap_bc_coordinates: null
-    num_mesh: 7
-  output_folder: output/task1
+    num_mesh: 1
+  output_folder: /mnt/data/Experiment/DeformNet/Output/MMWHS/
   mode: test
 train:
     batch_size: 1
     lr: 0.0005
-    num_epoch: 300
-    pre_train: pretrained/task1_mmwhs.hdf5
+    num_epoch: 3
+    pre_train: null
     pre_train_unet: null
-    mesh_dat_filemame: examples/09_13_2022_22_29_27_bbw.dat
+    mesh_dat_filemame: templates/meshes/07_19_2024_22_33_11_bbw.dat
     data:
         train_img_folder:
-            - /path/to/to/original/image/dir
-            - /path/to/to/augmented/image/dir
+            - /mnt/data/Experiment/Data/DeformNet_Data/MMWHS/tfrecords_augmented/
         val_img_folder: 
-            - /path/to/to/original/image/dir
+            - /mnt/data/Experiment/Data/DeformNet_Data/MMWHS/tfrecords/
         file_pattern: '*.tfrecords'
-        train_sub_folder_attr: ['', '']
+        train_sub_folder_attr: ['']
         val_sub_folder_attr: ['']
-        train_sub_folder_weights: [1., 1.]
+        train_sub_folder_weights: [1.]
         val_sub_folder_weights: [1.] 
-        mesh_ids: [0, 1, 2, 3, 4, 5, 6] 
+        mesh_ids: [0]   # myocardium
         modality: 
             - ct
-            - mr
-        seed: 41
+        seed: 42
     loss:
         seg_wt: 100
         geom_wt: [0.3, 0.46, 25.]
@@ -53,5 +51,5 @@ train:
         if_mask: True
         if_cap: False
         turn_off_l2: False
-    output_folder: output/task1/test
+    output_folder: /mnt/data/Experiment/DeformNet/Output/MMWHS/
 

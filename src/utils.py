@@ -53,6 +53,7 @@ def dice_score(pred, true):
     return dice_out
 
 import csv
+
 def write_scores(csv_path,scores): 
     with open(csv_path, 'w') as writeFile:
         writer = csv.writer(writeFile)
@@ -61,6 +62,7 @@ def write_scores(csv_path,scores):
             writer.writerow(tuple(scores[i]))
             print(scores[i])
     writeFile.close()
+
 def natural_sort(l): 
     convert = lambda text: int(text) if text.isdigit() else text.lower()
     alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
@@ -165,8 +167,7 @@ def _int64_feature(value):
     """Returns an int64_list from a bool / enum / int / uint."""
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
-
-def data_to_tfrecords(X, Y, S,transform, spacing, file_path_prefix=None, verbose=True, debug=True):
+def data_to_tfrecords(X, Y, S, transform, spacing, file_path_prefix=None, verbose=True, debug=True):
            
     # Generate tfrecord writer
     result_tf_file = file_path_prefix + '.tfrecords'

@@ -141,7 +141,6 @@ def find_cap(node_id, mesh, tag_id=1, max_cap_num=1000000, tol = 0.5, side_ring_
     vtk_arr_s.SetName('Side_ID')
     mesh.GetCellData().AddArray(vtk_arr_s)
     return mesh, ctr_cells, side_cells, face_data
-
    
 def cal_lap_index(mesh_neighbor):
     print("Mesh neighbor: ", mesh_neighbor.shape)
@@ -179,7 +178,7 @@ def get_face_node_list(mesh, output_mesh=False, target_num=None, cap_list=None):
         cells = cells[:,1:]
         # calculate neighbors using trimesh
         tri = trimesh.Trimesh(vertices=vtk_to_numpy(poly_i.GetPoints().GetData()), faces=(cells), process=False)
-        mesh_info['lap_list'].append(cal_lap_index(np.array(tri.vertex_neighbors)))
+        mesh_info['lap_list'].append(cal_lap_index(np.array(tri.vertex_neighbors, dtype=object)))
         mesh_info['face_list'].append(cells)
         if cap_list is not None:
             ctr_list = []
@@ -232,7 +231,7 @@ def make_dat_bc(mesh_fn, sample_fn, weight_fns, ctrl_fns, write=True, output_pat
     sample_mesh_info = get_face_node_list(sample_mesh)
     coords = vtk_to_numpy(template.GetPoints().GetData())
     weights = [np.genfromtxt(weight_fn,delimiter=',').astype(np.float32) for weight_fn in weight_fns]
-
+    
     sample_pts = vtk_to_numpy(sample_mesh.GetPoints().GetData())
 
     # find the corresponding id of ctrl pts on sample pts
@@ -244,30 +243,37 @@ def make_dat_bc(mesh_fn, sample_fn, weight_fns, ctrl_fns, write=True, output_pat
         sample_pts[id_ctrl_on_sample, :] = ctrl_coords
         id_ctrl_on_sample_all.append(id_ctrl_on_sample)
     
-    #----------Not needed if sample mesh and template mesh are the same-----
-    id_mesh_on_sample = []
-    for i in range(NUM_MESH):
-        sample_i = vtk.vtkPolyData()
-        sample_i_pts = vtk.vtkPoints()
-        sample_i_pts.SetData(numpy_to_vtk(sample_pts[sample_mesh_info['node_list'][i]: sample_mesh_info['node_list'][i+1], :]))
-        sample_i.SetPoints(sample_i_pts)
-        tmplt_i = vtk.vtkPolyData()
-        tmplt_i_pts = vtk.vtkPoints()
-        tmplt_i_pts.SetData(numpy_to_vtk(coords[tmplt_mesh_info['node_list'][i]:tmplt_mesh_info['node_list'][i+1],:]))
-        tmplt_i.SetPoints(tmplt_i_pts)
-        id_mesh_on_sample.append(find_point_correspondence(tmplt_i, sample_i_pts))
-    #print(id_mesh_on_sample)
-    #-----------------------------------------------------------------------
-    info = {'sample_coords': sample_pts.astype(np.float32), 'sample_faces': sample_mesh_info['face_list'], 'sample_node_list': sample_mesh_info['node_list'], \
-            'bbw': weights , 'tmplt_coords': coords.astype(np.float32), \
-            'id_ctrl_on_sample_all': id_ctrl_on_sample_all, \
-            'cap_data':tmplt_mesh_info['cap_id_list'], 'cap_ctr_data': tmplt_mesh_info['face_ctr_list'], 'cap_side_data': tmplt_mesh_info['face_side_list']}
+    # #----------Not needed if sample mesh and template mesh are the same-----
+    # id_mesh_on_sample = []
+    # for i in range(NUM_MESH):
+    #     sample_i = vtk.vtkPolyData()
+    #     sample_i_pts = vtk.vtkPoints()
+    #     sample_i_pts.SetData(numpy_to_vtk(sample_pts[sample_mesh_info['node_list'][i]: sample_mesh_info['node_list'][i+1], :]))
+    #     sample_i.SetPoints(sample_i_pts)
+    #     tmplt_i = vtk.vtkPolyData()
+    #     tmplt_i_pts = vtk.vtkPoints()
+    #     tmplt_i_pts.SetData(numpy_to_vtk(coords[tmplt_mesh_info['node_list'][i]:tmplt_mesh_info['node_list'][i+1],:]))
+    #     tmplt_i.SetPoints(tmplt_i_pts)
+    #     id_mesh_on_sample.append(find_point_correspondence(tmplt_i, sample_i_pts))
+    # #print(id_mesh_on_sample)
+    # #-----------------------------------------------------------------------
+    info = {
+        'sample_coords': sample_pts.astype(np.float32), 
+        'sample_faces': sample_mesh_info['face_list'], 
+        'sample_node_list': sample_mesh_info['node_list'],
+        'bbw': weights , 
+        'tmplt_coords': coords.astype(np.float32),
+        'id_ctrl_on_sample_all': id_ctrl_on_sample_all,
+        'cap_data':tmplt_mesh_info['cap_id_list'], 
+        'cap_ctr_data': tmplt_mesh_info['face_ctr_list'], 
+        'cap_side_data': tmplt_mesh_info['face_side_list']
+        }
 
     # build graph for contrl pts
     sample_faces_total = vtk_to_numpy(sample_mesh.GetPolys().GetData())
     sample_faces_total = sample_faces_total.reshape(sample_mesh.GetNumberOfCells(), 4)
     mesh = trimesh.Trimesh(vertices=sample_pts, faces=(sample_faces_total[:,1:]), process=False)
-    info['lap_ids'] = cal_lap_index(mesh.vertex_neighbors)
+    info['lap_ids'] = cal_lap_index(np.array(mesh.vertex_neighbors, dtype=object))
     adj_1 = nx.adjacency_matrix(mesh.vertex_adjacency_graph, nodelist=range(len(sample_pts)))
     cheb_1 = chebyshev_polynomials(adj_1,1)
     info['support'] = cheb_1
@@ -283,13 +289,27 @@ def make_dat_bc(mesh_fn, sample_fn, weight_fns, ctrl_fns, write=True, output_pat
 
 def parse():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--tmplt_fn', help='Name of the template mesh.')
-    parser.add_argument('--sample_fn', help='Name of the sampling mesh.')
-    parser.add_argument('--ctrl_fns', nargs='+', default=[], help='Name of the control points')
-    parser.add_argument('--weight_fns', nargs='+', default=[], help='Name of the control points')
-    parser.add_argument('--out_dir', help='Path to the output folder')
-    parser.add_argument('--center_coords_fn', default=None, help='Filename where coordinates of the center points of vessels were stored for assigning regularization losses')
-    parser.add_argument('--num_mesh', type=int, help='Number of mesh components')
+    parser.add_argument('--tmplt_fn', 
+                        default='meshes/template.vtp',
+                        help='Name of the template mesh.')
+    parser.add_argument('--sample_fn', 
+                        default='meshes/template.vtp',
+                        help='Name of the sampling mesh.')
+    parser.add_argument('--ctrl_fns', nargs='+', 
+                        default=['meshes/template_merged_75pts_adjusted.obj'], 
+                        help='Name of the control points')
+    parser.add_argument('--weight_fns', nargs='+', 
+                        default=['meshes/template_75pts.csv'], 
+                        help='Name of the control points')
+    parser.add_argument('--out_dir', 
+                        default='meshes',
+                        help='Path to the output folder')
+    parser.add_argument('--center_coords_fn',
+                        default=None, 
+                        help='Filename where coordinates of the center points of vessels were stored for assigning regularization losses')
+    parser.add_argument('--num_mesh', 
+                        default=1,
+                        type=int, help='Number of mesh components')
     return parser.parse_args()
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
-output_dir=train_dat/wh_noerode
-seg_fn=segmentation/wh.nii.gz
+output_dir=/home/yd21/Documents/HeartDeformNets/templates/meshes
+seg_fn=/home/yd21/Documents/HeartDeformNets/templates/segmentation/mmwhs_binary.nii.gz
 target_node_num=3260
 num_handles_arr=(75 600)
 num_mesh=7
@@ -49,4 +49,9 @@ done
 # Step 5: create dat file for training
 echo $ctrl_pt_arr
 echo $weight_arr
-python make_mesh_info_dat.py --tmplt_fn $output_dir/template.vtp --sample_fn $output_dir/template.vtp --weight_fns $weight_arr --ctrl_fns $ctrl_pt_arr --out_dir $output_dir --num_mesh $num_mesh --center_coords_fn meshes/vessel_centers.yaml
+
+# use ParaView to correct errors in generated template.vtp (choose RegionID data and save in ASCII), overwrite the file in meshes folder, and run make_mesh_info_dat.py manually.
+
+# python make_mesh_info_dat.py --tmplt_fn $output_dir/template.vtp --sample_fn $output_dir/template.vtp --weight_fns $weight_arr --ctrl_fns $ctrl_pt_arr --out_dir $output_dir --num_mesh $num_mesh --center_coords_fn $coords_fn
+
+# do the same to the exported vtp file from make_mesh_info_dat.py

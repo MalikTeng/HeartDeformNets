@@ -161,11 +161,17 @@ def cal_lap_index(mesh_neighbor):
 def get_face_node_list(mesh, output_mesh=False, target_num=None, cap_list=None):
     mesh_info = {'node_list': [0], 'face_list': [], 'lap_list': [], 'cap_id_list':[], 'face_side_list':[], 'face_ctr_list':[]}
     total_node = 0
-    region_ids = np.unique(vtk_to_numpy(mesh.GetPointData().GetArray('RegionId'))).astype(int)
+    try:
+        region_ids = np.unique(vtk_to_numpy(mesh.GetPointData().GetArray('RegionId'))).astype(int)
+    except AttributeError:
+        region_ids = [1]
     if output_mesh:
         poly = []
     for index, i in enumerate(region_ids):
-        poly_i = thresholdPolyData(mesh, 'RegionId', (i, i),'point')
+        if len(region_ids) == 1:
+            poly_i = mesh
+        else:
+            poly_i = thresholdPolyData(mesh, 'RegionId', (i, i),'point')
         if target_num is not None:
             rate = max(0., 1. - float(target_num)/poly_i.GetNumberOfPoints())    
             poly_i = decimation(poly_i, rate)

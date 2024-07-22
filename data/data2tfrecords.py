@@ -15,6 +15,7 @@
 import os
 import glob
 import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '../external'))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src")) 
 import numpy as np
 import SimpleITK as sitk
@@ -22,6 +23,7 @@ import tensorflow as tf
 from utils import *
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+from vtk_utils.vtk_utils import *
 from pre_process import swapLabels, RescaleIntensity, resample_spacing, swapLabels_ori
 import argparse
 

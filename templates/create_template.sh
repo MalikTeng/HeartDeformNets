@@ -1,5 +1,5 @@
 read -p "Enter the output directory: " output_dir
-read -p "Enter the segmentation file path: " seg_fn
+# read -p "Enter the segmentation file path: " seg_fn
 
 mkdir -p $output_dir
 target_node_num=3260
@@ -9,13 +9,13 @@ num_mesh=1
 shape_deform_dir=bc/build
 
 mkdir -p $output_dir
-# Step 1: create template from segmentation
-python create_template.py \
-    --seg_fn $seg_fn \
-    --target_node_num $target_node_num \
-    --output $output_dir/template.obj \
-    --if_turn_off_erode \
-    --binary
+# # Step 1: create template from segmentation (skip due to customed template obj file already created)
+# python create_template.py \
+#     --seg_fn $seg_fn \
+#     --target_node_num $target_node_num \
+#     --output $output_dir/template.obj \
+#     --if_turn_off_erode \
+#     # --binary
 
 ##### Step 2: pre-process template for biharmonic coordinate calculation
 python clean_multi_component_to_single.py --fn $output_dir/template.obj --output $output_dir/template_merged.obj --decimate_rate 0.

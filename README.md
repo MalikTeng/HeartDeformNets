@@ -82,14 +82,14 @@ _I have all images and labels foreground cropped, resized, and padded to 128x128
 The data preparation steps are as follows:
 - If data augmentation is preferred, you need the __mpi4py__ (Python bindings for MPI) installed. Here is how to install it on a Linux machine.
     - Install MPI implementation:
-    ```
-    sudo apt update
-    sudo apt install libopenmpi-dev
-    ```
+        ```
+        sudo apt update
+        sudo apt install libopenmpi-dev
+        ```
     - Install mpi4py (if you are in the `deformnet` environment):
-    ```
-    pip install mpi4py
-    ```
+        ```
+        pip install mpi4py
+        ```
 - Run data augmentation with the following command (I did this by running on a local machine, but if you are doing this with SSH on a remote machine, you need to install __X11__ and __xauth__):
     ```
     mpirun -n 4 python data/data_augmentation.py \

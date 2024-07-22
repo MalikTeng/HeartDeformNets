@@ -186,7 +186,8 @@ class SpatialTransform(object):
         if mesh is not None:
             self.mesh = mesh
     def clear_transform(self):
-        self.transform = sitk.Transform()
+        # self.transform = sitk.Transform()
+        self.transform = sitk.CompositeTransform(self.dim)
     def apply_transform(self):
         output = []
         out_im = transform_func(self.image, self.image, self.transform, order=1)
@@ -221,7 +222,8 @@ class AffineTransform(SpatialTransform):
         self.rot_range = rot_range
         self.flip_prob = flip_prob
         self.trans_range = trans_range
-        self.transform = sitk.Transform()
+        # self.transform = sitk.Transform()
+        self.transform = sitk.CompositeTransform(image.GetDimension())
 
     def scale(self):
         scale_trans= sitk.AffineTransform(self.dim)
@@ -317,7 +319,7 @@ class NonlinearTransform(SpatialTransform):
         d[:, -2:, :, :] = 0.
         d[:, :, :2, :] = 0.
         d[:, :, -2:, :] = 0.
-        sitk.WriteImage(sitk.GetImageFromArray(d[:,:,:,0]), '/Users/fanweikong/Documents/Modeling/HeartDeepFFD/output/debug/b_spline.nii.gz')
+        sitk.WriteImage(sitk.GetImageFromArray(d[:,:,:,0]), 'b_spline.nii.gz')
         
         params = np.asarray(self.transform.GetParameters(), dtype=np.float64)
         params += d.flatten(order='F')

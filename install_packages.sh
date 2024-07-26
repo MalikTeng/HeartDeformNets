@@ -3,4 +3,4 @@ while read requirement; do
         package_name=$(echo $requirement | sed 's/[<>=].*//')
         conda install --yes "$package_name" || pip install "$package_name"
     fi
-done < requirements.txt
+done < requirements_tf2.txt

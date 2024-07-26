@@ -41,6 +41,44 @@ from call_backs import *
 from vtk_utils.vtk_utils import *
 import yaml
 import SimpleITK as sitk
+
+
+# from tensorflow.keras.backend import set_session
+# tf.ConfigProto = tf.compat.v1.ConfigProto
+# tf.Session = tf.compat.v1.Session
+
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth = True
+# session = tf.Session(config=config)
+# set_session(session)
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = '0' # Set to -1 if CPU should be used CPU = -1 , GPU = 0
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+cpus = tf.config.experimental.list_physical_devices('CPU')
+
+if gpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print(e)
+elif cpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        logical_cpus= tf.config.experimental.list_logical_devices('CPU')
+        print(len(cpus), "Physical CPU,", len(logical_cpus), "Logical CPU")
+    except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print(e)
+
+
 """# Set up"""
 
 parser = argparse.ArgumentParser()
@@ -135,6 +173,9 @@ train_ds_list, val_ds_list = [], []
 train_ds_num, val_ds_num = [], []
 for data_folder_out, attr in zip(params['train']['data']['train_img_folder'], params['train']['data']['train_sub_folder_attr']):
     x_train_filenames_i = buildImageDataset(data_folder_out, params['train']['data']['modality'], params['train']['data']['seed'], mode='_train'+attr, ext=params['train']['data']['file_pattern'])
+
+    x_train_filenames_i = x_train_filenames_i[:5]
+
     train_ds_num.append(len(x_train_filenames_i))
     train_ds_i = get_baseline_dataset(x_train_filenames_i, preproc_fn=tr_preprocessing_fn, mesh_ids=params['train']['data']['mesh_ids'], \
             shuffle_buffer=10000, if_seg=if_seg, num_block=params['network']['num_blocks'])
@@ -154,16 +195,19 @@ train_ds = train_ds.batch(params['train']['batch_size'])
 val_ds = tf.data.experimental.sample_from_datasets(val_ds_list, weights=val_data_weights)
 val_ds = val_ds.batch(params['train']['batch_size'])
 
-num_train_examples = 1500
-num_val_examples =  val_ds_num[np.argmax(val_data_weights)]/np.max(val_data_weights) 
-print("Number of train, val samples after reweighting: ", num_train_examples, num_val_examples)
+print("Number of train, val samples after reweighting: ", max(train_ds_num), max(val_ds_num))
+# num_train_examples = 1500
+# num_val_examples =  val_ds_num[np.argmax(val_data_weights)]/np.max(val_data_weights) 
+# print("Number of train, val samples after reweighting: ", num_train_examples, num_val_examples)
 
 """ Training """
 history =unet_gcn.fit(train_ds, 
-                   steps_per_epoch=int(np.ceil(num_train_examples / float(params['train']['batch_size']))),
+                #    steps_per_epoch=int(np.ceil(num_train_examples / float(params['train']['batch_size']))),
+                   steps_per_epoch=int(np.ceil(max(train_ds_num) / float(params['train']['batch_size']))),
                    epochs=params['train']['num_epoch'],
                    validation_data=val_ds,
-                   validation_steps= int(np.ceil(num_val_examples / float(params['train']['batch_size']))),
+                #    validation_steps= int(np.ceil(num_val_examples / float(params['train']['batch_size']))),
+                   validation_steps= int(np.ceil(max(val_ds_num) / float(params['train']['batch_size']))),
                    callbacks=call_backs)
 with open(params['train']['output_folder']+"_history", 'wb') as handle: # saving the history 
         pickle.dump(history.history, handle)

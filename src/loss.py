@@ -20,7 +20,8 @@ from tensorflow.keras import backend as K
 import numpy as np
 
 from tensorflow.python.framework import ops
-nn_distance_module=tf.load_op_library(os.path.join(os.path.dirname(__file__), '../external/tf_nndistance_so.so'))
+# Use tf.compat.v1 for loading op library and registering gradient
+nn_distance_module=tf.compat.v1.load_op_library(os.path.join(os.path.dirname(__file__), '../external/tf_nndistance_so.so'))
 
 def nn_distance(xyz1,xyz2):
     '''
@@ -34,7 +35,7 @@ output: idx2:  (batch_size,#point_2)   nearest neighbor from second to first
     '''
     return nn_distance_module.nn_distance(xyz1,xyz2)
 
-@ops.RegisterGradient('NnDistance')
+@tf.RegisterGradient('NnDistance')
 def _nn_distance_grad(op,grad_dist1,grad_idx1,grad_dist2,grad_idx2):
     xyz1=op.inputs[0]
     xyz2=op.inputs[1]

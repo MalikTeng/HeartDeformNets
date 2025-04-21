@@ -15,14 +15,9 @@ git clone --recurse-submodules https://github.com/MalikTeng/HeartDeformNets.git
 To prepare the environment for this implementation, follow the steps below:
 ```
 cd HeartDeformNets
-conda create -n deformnet python\<3.7
-conda activate deformnet
-chmod +x install_packages.sh
-./install_packages.sh
-```
-If the tensorflow-gpu version cannot be installed, try terminating the above shell script and run the following command:
-```
-pip install tensorflow-gpu==1.15.0
+conda create -n deformnet_tf2 python=3.9
+conda activate deformnet_tf2
+pip install -r requirements_tf2.txt
 ```
 
 ## Template Meshes
@@ -125,6 +120,7 @@ cd external/
 make
 cd ..
 ```
+**Note:** If you encounter compilation errors, you might need to edit the `external/makefile`. Ensure the CUDA and TensorFlow paths are correct for your system. Additionally, depending on your TensorFlow version (e.g., TF 2.10), you might need to change the C++ standard from `-std=c++14` to `-std=c++17` in the `makefile` to ensure ABI compatibility.
 
 ### Training
 

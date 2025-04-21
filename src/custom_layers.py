@@ -22,6 +22,8 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import regularizers
 import tf_utils
 import numpy as np
+from tensorflow.keras.layers import Layer, InputSpec
+from tensorflow.keras import initializers, regularizers, constraints
 
 def dot(x, y, sparse=False):
     """Wrapper for tf.matmul (sparse vs dense)."""
@@ -405,10 +407,7 @@ class GraphConv(layers.Layer):
         output_shape[-1] = self.output_dim
         return output_shape
 
-from tensorflow.python.keras.layers import Layer, InputSpec
-from tensorflow.python.keras import initializers, regularizers, constraints
-
-class InstanceNormalization(layers.Layer):
+class InstanceNormalization(Layer):
     """Instance normalization layer. Taken from keras.contrib
     Normalize the activations of the previous layer at each step,
     i.e. applies a transformation that maintains the mean activation
@@ -480,7 +479,7 @@ class InstanceNormalization(layers.Layer):
         if (self.axis is not None) and (ndim == 2):
             raise ValueError('Cannot specify axis for rank 1 tensor')
 
-        self.input_spec = InputSpec(ndim=ndim)
+        self.input_spec = [InputSpec(ndim=ndim)]
 
         if self.axis is None:
             shape = (1,)

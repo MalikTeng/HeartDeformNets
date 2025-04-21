@@ -1,4 +1,3 @@
-
 #Copyright (C) 2021 Fanwei Kong, Shawn C. Shadden, University of California, Berkeley
 
 #Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +31,7 @@ def parse():
     parser.add_argument('--folder', help='Name of the folder containing the image data')
     parser.add_argument('--modality', nargs='+', help='Name of the modality, mr, ct, split by space')
     parser.add_argument('--size', nargs='+', type=int, help='Image dimensions')
-    parser.add_argument('--folder_postfix', nargs='?', default='_train', help='Folder postfix of the folder to look for')
+    parser.add_argument('--folder_postfixes', nargs='+', default=['_train'], help='List of folder postfixes to process')
     parser.add_argument('--out_folder', help='Name of the output folder')
     parser.add_argument('--deci_rate', type=float, default=0., help='Decimation rate of ground truth mesh')
     parser.add_argument('--smooth_iter', type=int, default=50, help='Smoothing iterations for GT mesh')
@@ -143,9 +142,11 @@ if __name__=='__main__':
     try:
         os.mkdir(args.out_folder)
     except Exception as e: print(e)
-    for m in args.modality:
-        try:
-            os.mkdir(os.path.join(args.out_folder, m+args.folder_postfix))
-        except Exception as e: print(e)
-    data_preprocess(args.modality,args.folder, args.out_folder,args.folder_postfix, args.intensity, args.size, args.seg_id, args.deci_rate, args.smooth_iter, args.aug_num)
+    
+    for postfix in args.folder_postfixes:
+        for m in args.modality:
+            try:
+                os.mkdir(os.path.join(args.out_folder, m+postfix))
+            except Exception as e: print(e)
+        data_preprocess(args.modality, args.folder, args.out_folder, postfix, args.intensity, args.size, args.seg_id, args.deci_rate, args.smooth_iter, args.aug_num)
 

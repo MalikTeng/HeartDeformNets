@@ -174,7 +174,7 @@ def data_to_tfrecords(X, Y, S, transform, spacing, file_path_prefix=None, verbos
            
     # Generate tfrecord writer
     result_tf_file = file_path_prefix + '.tfrecords'
-    writer = tf.python_io.TFRecordWriter(result_tf_file)
+    writer = tf.io.TFRecordWriter(result_tf_file) # TF 2.x
     if verbose:
         print("Serializing example into {}".format(result_tf_file))
         

@@ -1,17 +1,3 @@
-
-#Copyright (C) 2022 Fanwei Kong, Shawn C. Shadden, University of California, Berkeley
-
-#Licensed under the Apache License, Version 2.0 (the "License");
-#you may not use this file except in compliance with the License.
-#You may obtain a copy of the License at
-
-#    http://www.apache.org/licenses/LICENSE-2.0
-
-#Unless required by applicable law or agreed to in writing, software
-#distributed under the License is distributed on an "AS IS" BASIS,
-#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#See the License for the specific language governing permissions and
-#limitations under the License.
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -112,7 +98,7 @@ if params['train']['pre_train_unet'] is not None:
     unet_gcn = model.load_pre_trained_weights(unet_gcn, params['train']['pre_train_unet'],trainable=False)
 unet_gcn.summary(line_length=150)
 
-adam = Adam(lr=params['train']['lr'], beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=True)
+adam = Adam(learning_rate=params['train']['lr'], beta_1=0.9, beta_2=0.999, epsilon=1e-7, amsgrad=True)
 output_keys = [node.name.split('/')[0] for node in unet_gcn.outputs]
 print("Output Keys: ", output_keys)
 ctrl_loss_list = []

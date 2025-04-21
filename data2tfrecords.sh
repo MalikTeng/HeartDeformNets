@@ -1,9 +1,11 @@
 #!/bin/bash
 
+# Disable VTK parallel I/O to avoid dependency issues
+export VTK_USE_PARALLEL=0
+
 # Prompt user for input
 read -p "Enter the path to the input folder: " folder
 read -p "Enter the modality (e.g., ct, mr): " modality
-read -p "Enter the postfix for the output folder (e.g., train, val, or test): " folder_postfix
 
 # Automatically define the output folder
 input_basename=$(basename "$folder")
@@ -17,12 +19,12 @@ fi
 
 echo "Output folder set to: $out_folder"
 
-# Run the Python script with user-provided inputs and auto-generated output folder
+# Run Python script once with all postfixes as arguments
 python data/data2tfrecords.py \
     --folder "$folder" \
     --modality "$modality" \
     --size 128 128 128 \
-    --folder_postfix "_$folder_postfix" \
+    --folder_postfixes "_train" "_val" "_test" \
     --deci_rate 0 \
     --smooth_ite 50 \
     --out_folder "$out_folder" \

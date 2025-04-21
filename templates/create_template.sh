@@ -49,8 +49,12 @@ do
 done
 
 # Step 5: create dat file for training
-echo $ctrl_pt_arr
-echo $weight_arr
+# echo $ctrl_pt_arr
+# echo $weight_arr
+echo "${ctrl_pt_arr[@]}" > "$output_dir/ctrl_fns.txt"
+echo "${weight_arr[@]}" > "$output_dir/weight_fns.txt"
+echo "Control point paths written to $output_dir/ctrl_fns.txt"
+echo "Weight paths written to $output_dir/weight_fns.txt"
 
 # use ParaView to correct errors in generated template.vtp (choose RegionID data and save in ASCII), overwrite the file in meshes folder, and run make_mesh_info_dat.py manually.
 

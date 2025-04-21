@@ -160,7 +160,7 @@ train_ds_num, val_ds_num = [], []
 for data_folder_out, attr in zip(params['train']['data']['train_img_folder'], params['train']['data']['train_sub_folder_attr']):
     x_train_filenames_i = buildImageDataset(data_folder_out, params['train']['data']['modality'], params['train']['data']['seed'], mode='_train'+attr, ext=params['train']['data']['file_pattern'])
 
-    x_train_filenames_i = x_train_filenames_i[:5]
+    x_train_filenames_i = x_train_filenames_i
 
     train_ds_num.append(len(x_train_filenames_i))
     train_ds_i = get_baseline_dataset(x_train_filenames_i, preproc_fn=tr_preprocessing_fn, mesh_ids=params['train']['data']['mesh_ids'], \

@@ -17,17 +17,12 @@ from tensorflow.keras import losses
 from tensorflow.keras import models
 
 from utils import buildImageDataset, construct_feed_dict 
-from custom_layers import *
-
 from augmentation import changeIntensity_img, _augment
 from dataset import get_baseline_dataset
 from model import HeartDeformNet
-from loss import *
-from call_backs import *
-from vtk_utils.vtk_utils import *
+from loss import ctrl_pts_loss_0, mesh_loss_geometric_cf, binary_bce_dice_loss, mesh_point_loss_cf
+from call_backs import SaveModelOnCD
 import yaml
-import SimpleITK as sitk
-
 
 # from tensorflow.keras.backend import set_session
 # tf.ConfigProto = tf.compat.v1.ConfigProto
@@ -159,9 +154,6 @@ train_ds_list, val_ds_list = [], []
 train_ds_num, val_ds_num = [], []
 for data_folder_out, attr in zip(params['train']['data']['train_img_folder'], params['train']['data']['train_sub_folder_attr']):
     x_train_filenames_i = buildImageDataset(data_folder_out, params['train']['data']['modality'], params['train']['data']['seed'], mode='_train'+attr, ext=params['train']['data']['file_pattern'])
-
-    x_train_filenames_i = x_train_filenames_i
-
     train_ds_num.append(len(x_train_filenames_i))
     train_ds_i = get_baseline_dataset(x_train_filenames_i, preproc_fn=tr_preprocessing_fn, mesh_ids=params['train']['data']['mesh_ids'], \
             shuffle_buffer=10000, if_seg=if_seg, num_block=params['network']['num_blocks'])

@@ -6,6 +6,10 @@ __pycache__/
 *.vtp
 *.obj
 *.dat
+*.txt
+*.out
+*.cmake
+*.nii.gz
 
 # C extensions
 *.so

@@ -4,7 +4,7 @@ packaging==20.9
 scikit_image==0.19.3
 scipy==1.9.1
 SimpleITK==2.2.1
-vtk==9.1.0
+# vtk==9.1.0
 trimesh==3.16.4
 PyYAML==6.0
 tensorflow-gpu==2.10.0

@@ -1,17 +1,3 @@
-
-#Copyright (C) 2022 Fanwei Kong, Shawn C. Shadden, University of California, Berkeley
-
-#Licensed under the Apache License, Version 2.0 (the "License");
-#you may not use this file except in compliance with the License.
-#You may obtain a copy of the License at
-
-#    http://www.apache.org/licenses/LICENSE-2.0
-
-#Unless required by applicable law or agreed to in writing, software
-#distributed under the License is distributed on an "AS IS" BASIS,
-#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#See the License for the specific language governing permissions and
-#limitations under the License.
 import os
 import numpy as np
 import sys
@@ -19,20 +5,68 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "external"))
 import tensorflow as tf
 import SimpleITK as sitk 
-from pre_process import *
+from pre_process import resample_spacing, RescaleIntensity, swapLabels_ori
 from tensorflow.python.keras import backend as K
 from model import HeartDeformNet
-from data_loader import *
+from data_loader import DataLoader
+from utils import construct_feed_dict, natural_sort, write_scores, dice_score
 import vtk
-from vtk.util.numpy_support import numpy_to_vtk, vtk_to_numpy
-from utils import *
-from vtk_utils.vtk_utils import *
+from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+from vtk_utils.vtk_utils import (
+    load_vtk_mesh,
+    load_image_to_nifty,
+    load_vtk_image,
+    exportSitk2VTK,
+    build_transform_matrix,
+    vtk_marching_cube,
+    appendPolyData,
+    multiclass_convert_polydata_to_imagedata,
+    write_vtk_image,
+    vtk_write_mask_as_nifty,
+    write_vtk_polydata,
+    write_numpy_points,
+)
 import argparse
 import pickle
 import time
 import scipy.sparse as sp
 from scipy.spatial.distance import directed_hausdorff
 import yaml
+
+# from tensorflow.keras.backend import set_session
+# tf.ConfigProto = tf.compat.v1.ConfigProto
+# tf.Session = tf.compat.v1.Session
+
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth = True
+# session = tf.Session(config=config)
+# set_session(session)
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = '0' # Set to -1 if CPU should be used CPU = -1 , GPU = 0
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+cpus = tf.config.experimental.list_physical_devices('CPU')
+
+if gpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print(e)
+elif cpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        logical_cpus= tf.config.experimental.list_logical_devices('CPU')
+        print(len(cpus), "Physical CPU,", len(logical_cpus), "Logical CPU")
+    except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print(e)
 
 class Prediction:
     #This class use the GCN model to predict mesh from 3D images
@@ -56,6 +90,8 @@ class Prediction:
         self.out_fn = out_fn
         self.image_vol = resample_spacing(self.image_vol, template_size = size, order=1)[0]
         if write:
+            dir_name = os.path.dirname(self.out_fn)
+            base_name = os.path.basename(self.out_fn)
             sitk.WriteImage(self.image_vol, os.path.join(dir_name, base_name+'_input_linear.nii.gz'))
         self.img_center2 = np.array(self.image_vol.TransformContinuousIndexToPhysicalPoint(np.array(self.image_vol.GetSize())/2.0))
         self.prediction = None
@@ -77,7 +113,7 @@ class Prediction:
             prediction = prediction[1:]
         # remove control points output
         self.prediction_im = []
-        sample_coords = tf.Session().run(self.info['feed_dict']['sample_coords']) 
+        sample_coords = self.info['feed_dict']['sample_coords'].numpy()
         IMAGE_NUM = 0
         
         grid_mesh = []
@@ -109,7 +145,7 @@ class Prediction:
 
             if self.info['train']:
                 l = i-1 if i>0 else i
-                slice_ids = tf.Session().run(self.info['feed_dict']['id_ctrl_on_sample'][l])
+                slice_ids = self.info['feed_dict']['id_ctrl_on_sample'][l].numpy()
                 grid_points_i = pred_all[slice_ids, :]
                 grid_mesh.append(grid_points_i)
             

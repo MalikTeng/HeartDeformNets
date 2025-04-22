@@ -12,12 +12,16 @@ To download the source code with submodules, please run:
 ```
 git clone --recurse-submodules https://github.com/MalikTeng/HeartDeformNets.git
 ```
-To prepare the environment for this implementation, follow the steps below:
-```
+To prepare the environment and install all dependencies, run the installation script:
+```bash
 cd HeartDeformNets
-conda create -n deformnet python=3.9
+bash install_packages.sh
+```
+This script will automatically create (or recreate if it exists) the 'deformnet' Conda environment with Python 3.9, install VTK using Conda, and then install the remaining packages listed in `requirements.txt` using pip.
+
+After the script finishes, activate the environment using:
+```bash
 conda activate deformnet
-pip install -r requirements.txt
 ```
 
 ## Template Meshes
@@ -137,4 +141,28 @@ cd external/
 make
 cd ..
 ```
-**Note:** If you encounter compilation errors, you might need to edit the `external/makefile`. Ensure the CUDA and TensorFlow paths are correct for your system. Additionally, depending on your TensorFlow version (e.g., TF 2.10), you might need to change the C++ standard from `
+**Note:** If you encounter compilation errors, you might need to edit the `external/makefile`. Ensure the CUDA and TensorFlow paths are correct for your system. Additionally, depending on your TensorFlow version (e.g., TF 2.10), you might need to change the C++ standard from `c++11` to `c++14` or `c++17`.
+
+### Running Training
+
+Once the data is prepared and the necessary modules are compiled:
+
+1.  **Configure Training**: Modify one of the configuration files in the `config/` directory (e.g., `config/task1_mmwhs.yaml`) or create your own. Ensure the paths to your datasets, template `.dat` file, and output directories are correctly specified. Pay close attention to parameters like `mesh_dat_filemame`, `train_img_folder`, `val_img_folder`, `output_folder`, etc.
+2.  **Start Training**: Run the training script with the chosen configuration file:
+    ```bash
+    python train.py --config config/your_config_file.yaml
+    ```
+    Replace `your_config_file.yaml` with the actual name of your configuration file. The script will load the parameters from the YAML file and start the training process. Model weights will be saved periodically (based on validation performance) to the specified `output_folder` in the config file (e.g., `weights_gcn.hdf5`).
+
+## Prediction
+
+After training a model, you can use it to predict mesh deformations on new images.
+
+1.  **Configure Prediction**: Modify one of the configuration files in the `config/` directory or create a new one specifically for prediction. Ensure the paths to the input images (`image_folder`), the trained model weights (`model_weights_filename`), the template mesh (`mesh_tmplt_filename`), the template `.dat` file (`mesh_dat_filemame`), and the output directory (`output_folder`) are correctly specified.
+2.  **Run Prediction**: Execute the prediction script with the appropriate configuration file:
+    ```bash
+    python predict.py --config config/your_prediction_config.yaml
+    ```
+    Replace `your_prediction_config.yaml` with your prediction configuration file. The script will load the images, apply the trained model, and save the resulting deformed meshes (usually as `.vtp` files) and optionally segmentation masks (e.g., `.nii.gz`) to the specified `output_folder`.
+
+Example configuration files (`cap.yaml`, `scotheart.yaml`, `task1_mmwhs.yaml`) are provided in the `config/` directory as starting points.

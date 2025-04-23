@@ -1,7 +1,5 @@
-read -p "Enter the output directory: " output_dir
-# read -p "Enter the segmentation file path: " seg_fn
-
-mkdir -p $output_dir
+output_dir=meshes
+seg_fn=segmentation/mmwhs-lv_myo.nii.gz
 target_node_num=3260
 num_handles_arr=(75 600)
 num_mesh=1
@@ -9,13 +7,13 @@ num_mesh=1
 shape_deform_dir=bc/build
 
 mkdir -p $output_dir
-# # Step 1: create template from segmentation (skip due to customed template obj file already created)
-# python create_template.py \
-#     --seg_fn $seg_fn \
-#     --target_node_num $target_node_num \
-#     --output $output_dir/template.obj \
-#     --if_turn_off_erode \
-#     # --binary
+# Step 1: create template from segmentation
+python create_template.py \
+    --seg_fn $seg_fn \
+    --target_node_num $target_node_num \
+    --output $output_dir/template.obj \
+    --if_turn_off_erode \
+    --binary
 
 ##### Step 2: pre-process template for biharmonic coordinate calculation
 python clean_multi_component_to_single.py --fn $output_dir/template.obj --output $output_dir/template_merged.obj --decimate_rate 0.
@@ -49,15 +47,7 @@ do
 done
 
 # Step 5: create dat file for training
-# echo $ctrl_pt_arr
-# echo $weight_arr
-echo "${ctrl_pt_arr[@]}" > "$output_dir/ctrl_fns.txt"
-echo "${weight_arr[@]}" > "$output_dir/weight_fns.txt"
-echo "Control point paths written to $output_dir/ctrl_fns.txt"
-echo "Weight paths written to $output_dir/weight_fns.txt"
-
-# use ParaView to correct errors in generated template.vtp (choose RegionID data and save in ASCII), overwrite the file in meshes folder, and run make_mesh_info_dat.py manually.
-
-# python make_mesh_info_dat.py --tmplt_fn $output_dir/template.vtp --sample_fn $output_dir/template.vtp --weight_fns $weight_arr --ctrl_fns $ctrl_pt_arr --out_dir $output_dir --num_mesh $num_mesh --center_coords_fn $coords_fn
-
-# do the same to the exported vtp file from make_mesh_info_dat.py
+echo $ctrl_pt_arr
+echo $weight_arr
+python make_mesh_info_dat.py --tmplt_fn $output_dir/template.vtp --sample_fn $output_dir/template.vtp --weight_fns $weight_arr --ctrl_fns $ctrl_pt_arr --out_dir $output_dir --num_mesh $num_mesh 
+# --center_coords_fn meshes/vessel_centers.yaml

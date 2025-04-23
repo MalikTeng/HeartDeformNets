@@ -104,7 +104,8 @@ class Prediction:
         self.original_shape = img_vol.shape
         transform = build_transform_matrix(self.image_vol)
         spacing = np.array(self.image_vol.GetSpacing())
-        model_inputs = [np.expand_dims(np.expand_dims(img_vol, axis=-1), axis=0), np.expand_dims(transform, axis=0), np.expand_dims(spacing,axis=0)]
+        model_inputs = [np.expand_dims(np.expand_dims(img_vol, axis=-1), axis=0)]
+        # model_inputs = [np.expand_dims(np.expand_dims(img_vol, axis=-1), axis=0), np.expand_dims(transform, axis=0), np.expand_dims(spacing,axis=0)]
         start = time.time()
         prediction = self.model.predict(model_inputs)
         end = time.time()
@@ -246,7 +247,7 @@ class Prediction:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config')
+    parser.add_argument('--config', type=str, default='config/cap.yaml')
     args = parser.parse_args()
     with open(args.config, 'r') as stream:
         params = yaml.safe_load(stream)

@@ -21,7 +21,8 @@ import argparse
 from datetime import datetime
 import scipy.sparse as sp
 import pickle
-from scipy.sparse.linalg.eigen.arpack import eigsh
+# from scipy.sparse.linalg.eigen.arpack import eigsh
+from scipy.sparse.linalg import eigsh
 from scipy import sparse
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
@@ -141,15 +142,20 @@ def find_cap(node_id, mesh, tag_id=1, max_cap_num=1000000, tol = 0.5, side_ring_
     vtk_arr_s.SetName('Side_ID')
     mesh.GetCellData().AddArray(vtk_arr_s)
     return mesh, ctr_cells, side_cells, face_data
+
    
 def cal_lap_index(mesh_neighbor):
-    print("Mesh neighbor: ", mesh_neighbor.shape)
+    print("Mesh neighbor: ", mesh_neighbor.shape if hasattr(mesh_neighbor, 'shape') else len(mesh_neighbor))
     max_len = 0
     for j in mesh_neighbor:
         if len(j) > max_len:
             max_len = len(j)
     print("Max vertex degree is ", max_len)
-    lap_index = np.zeros([mesh_neighbor.shape[0], max_len+2]).astype(np.int32)
+    # Create lap_index using the length of mesh_neighbor
+    if hasattr(mesh_neighbor, 'shape'):
+        lap_index = np.zeros([mesh_neighbor.shape[0], max_len+2]).astype(np.int32)
+    else:
+        lap_index = np.zeros([len(mesh_neighbor), max_len+2]).astype(np.int32)
     for i, j in enumerate(mesh_neighbor):
         lenj = len(j)
         lap_index[i][0:lenj] = j
@@ -161,17 +167,11 @@ def cal_lap_index(mesh_neighbor):
 def get_face_node_list(mesh, output_mesh=False, target_num=None, cap_list=None):
     mesh_info = {'node_list': [0], 'face_list': [], 'lap_list': [], 'cap_id_list':[], 'face_side_list':[], 'face_ctr_list':[]}
     total_node = 0
-    try:
-        region_ids = np.unique(vtk_to_numpy(mesh.GetPointData().GetArray('RegionId'))).astype(int)
-    except AttributeError:
-        region_ids = [1]
+    region_ids = np.unique(vtk_to_numpy(mesh.GetPointData().GetArray('RegionId'))).astype(int)
     if output_mesh:
         poly = []
     for index, i in enumerate(region_ids):
-        if len(region_ids) == 1:
-            poly_i = mesh
-        else:
-            poly_i = thresholdPolyData(mesh, 'RegionId', (i, i),'point')
+        poly_i = thresholdPolyData(mesh, 'RegionId', (i, i),'point')
         if target_num is not None:
             rate = max(0., 1. - float(target_num)/poly_i.GetNumberOfPoints())    
             poly_i = decimation(poly_i, rate)
@@ -237,7 +237,7 @@ def make_dat_bc(mesh_fn, sample_fn, weight_fns, ctrl_fns, write=True, output_pat
     sample_mesh_info = get_face_node_list(sample_mesh)
     coords = vtk_to_numpy(template.GetPoints().GetData())
     weights = [np.genfromtxt(weight_fn,delimiter=',').astype(np.float32) for weight_fn in weight_fns]
-    
+
     sample_pts = vtk_to_numpy(sample_mesh.GetPoints().GetData())
 
     # find the corresponding id of ctrl pts on sample pts
@@ -249,31 +249,24 @@ def make_dat_bc(mesh_fn, sample_fn, weight_fns, ctrl_fns, write=True, output_pat
         sample_pts[id_ctrl_on_sample, :] = ctrl_coords
         id_ctrl_on_sample_all.append(id_ctrl_on_sample)
     
-    # #----------Not needed if sample mesh and template mesh are the same-----
-    # id_mesh_on_sample = []
-    # for i in range(NUM_MESH):
-    #     sample_i = vtk.vtkPolyData()
-    #     sample_i_pts = vtk.vtkPoints()
-    #     sample_i_pts.SetData(numpy_to_vtk(sample_pts[sample_mesh_info['node_list'][i]: sample_mesh_info['node_list'][i+1], :]))
-    #     sample_i.SetPoints(sample_i_pts)
-    #     tmplt_i = vtk.vtkPolyData()
-    #     tmplt_i_pts = vtk.vtkPoints()
-    #     tmplt_i_pts.SetData(numpy_to_vtk(coords[tmplt_mesh_info['node_list'][i]:tmplt_mesh_info['node_list'][i+1],:]))
-    #     tmplt_i.SetPoints(tmplt_i_pts)
-    #     id_mesh_on_sample.append(find_point_correspondence(tmplt_i, sample_i_pts))
-    # #print(id_mesh_on_sample)
-    # #-----------------------------------------------------------------------
-    info = {
-        'sample_coords': sample_pts.astype(np.float32), 
-        'sample_faces': sample_mesh_info['face_list'], 
-        'sample_node_list': sample_mesh_info['node_list'],
-        'bbw': weights , 
-        'tmplt_coords': coords.astype(np.float32),
-        'id_ctrl_on_sample_all': id_ctrl_on_sample_all,
-        'cap_data':tmplt_mesh_info['cap_id_list'], 
-        'cap_ctr_data': tmplt_mesh_info['face_ctr_list'], 
-        'cap_side_data': tmplt_mesh_info['face_side_list']
-        }
+    #----------Not needed if sample mesh and template mesh are the same-----
+    id_mesh_on_sample = []
+    for i in range(NUM_MESH):
+        sample_i = vtk.vtkPolyData()
+        sample_i_pts = vtk.vtkPoints()
+        sample_i_pts.SetData(numpy_to_vtk(sample_pts[sample_mesh_info['node_list'][i]: sample_mesh_info['node_list'][i+1], :]))
+        sample_i.SetPoints(sample_i_pts)
+        tmplt_i = vtk.vtkPolyData()
+        tmplt_i_pts = vtk.vtkPoints()
+        tmplt_i_pts.SetData(numpy_to_vtk(coords[tmplt_mesh_info['node_list'][i]:tmplt_mesh_info['node_list'][i+1],:]))
+        tmplt_i.SetPoints(tmplt_i_pts)
+        id_mesh_on_sample.append(find_point_correspondence(tmplt_i, sample_i_pts))
+    #print(id_mesh_on_sample)
+    #-----------------------------------------------------------------------
+    info = {'sample_coords': sample_pts.astype(np.float32), 'sample_faces': sample_mesh_info['face_list'], 'sample_node_list': sample_mesh_info['node_list'], \
+            'bbw': weights , 'tmplt_coords': coords.astype(np.float32), \
+            'id_ctrl_on_sample_all': id_ctrl_on_sample_all, \
+            'cap_data':tmplt_mesh_info['cap_id_list'], 'cap_ctr_data': tmplt_mesh_info['face_ctr_list'], 'cap_side_data': tmplt_mesh_info['face_side_list']}
 
     # build graph for contrl pts
     sample_faces_total = vtk_to_numpy(sample_mesh.GetPolys().GetData())
@@ -295,27 +288,13 @@ def make_dat_bc(mesh_fn, sample_fn, weight_fns, ctrl_fns, write=True, output_pat
 
 def parse():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--tmplt_fn', 
-                        default='meshes/template.vtp',
-                        help='Name of the template mesh.')
-    parser.add_argument('--sample_fn', 
-                        default='meshes/template.vtp',
-                        help='Name of the sampling mesh.')
-    parser.add_argument('--ctrl_fns', nargs='+', 
-                        default=['meshes/template_merged_75pts_adjusted.obj'], 
-                        help='Name of the control points')
-    parser.add_argument('--weight_fns', nargs='+', 
-                        default=['meshes/template_75pts.csv'], 
-                        help='Name of the control points')
-    parser.add_argument('--out_dir', 
-                        default='meshes',
-                        help='Path to the output folder')
-    parser.add_argument('--center_coords_fn',
-                        default=None, 
-                        help='Filename where coordinates of the center points of vessels were stored for assigning regularization losses')
-    parser.add_argument('--num_mesh', 
-                        default=1,
-                        type=int, help='Number of mesh components')
+    parser.add_argument('--tmplt_fn', help='Name of the template mesh.')
+    parser.add_argument('--sample_fn', help='Name of the sampling mesh.')
+    parser.add_argument('--ctrl_fns', nargs='+', default=[], help='Name of the control points')
+    parser.add_argument('--weight_fns', nargs='+', default=[], help='Name of the control points')
+    parser.add_argument('--out_dir', help='Path to the output folder')
+    parser.add_argument('--center_coords_fn', default=None, help='Filename where coordinates of the center points of vessels were stored for assigning regularization losses')
+    parser.add_argument('--num_mesh', type=int, help='Number of mesh components')
     return parser.parse_args()
 
 if __name__ == '__main__':

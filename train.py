@@ -63,7 +63,7 @@ elif cpus:
 """# Set up"""
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config')
+parser.add_argument('--config', default='config/cap.yaml')
 args = parser.parse_args()
 with open(args.config, 'r') as stream:
     params = yaml.safe_load(stream)
